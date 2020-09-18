@@ -4,21 +4,37 @@
 
 Use the timeit and cProfile libraries to find bad code.
 """
+__author__ = """
+Kevin Clark,
+source of help
+'https://www.youtube.com/watch?time_continue=377&v=8qEnExGLZfY&feature=emb_logo'
+"""
 
-__author__ = "???"
-
+from functools import wraps
+from pstats import SortKey
 import cProfile
 import pstats
-import functools
+import timeit
+import io
 
 
 def profile(func):
     """A cProfile decorator function that can be used to
     measure performance.
     """
-    # Be sure to review the lesson material on decorators.
-    # You need to understand how they are constructed and used.
-    raise NotImplementedError("Complete this decorator function")
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        work = func(*args, **kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+        return(work)
+    return wrapper
 
 
 def read_movies(src):
@@ -28,29 +44,32 @@ def read_movies(src):
         return f.read().splitlines()
 
 
-def is_duplicate(title, movies):
-    """Returns True if title is within movies list."""
-    for movie in movies:
-        if movie.lower() == title.lower():
-            return True
-    return False
-
-
+@profile
 def find_duplicate_movies(src):
     """Returns a list of duplicate movies from a src list."""
     movies = read_movies(src)
-    duplicates = []
-    while movies:
-        movie = movies.pop()
-        if is_duplicate(movie, movies):
-            duplicates.append(movie)
-    return duplicates
+    movies = [title.lower() for title in movies]
+    movies.sort()
+    duplicate = [
+        movie_one for movie_one, movie_two
+        in zip(movies[:-1], movies[1:])
+        if movie_one == movie_two
+        ]
+    return duplicate
 
 
 def timeit_helper():
     """Part A: Obtain some profiling measurements using timeit."""
-    # YOUR CODE GOES HERE
-    pass
+    t = timeit.Timer('main()')
+    repeat = 7
+    number = 1
+    result = t.repeat(repeat, number)
+    average = sum(result) / len(result)
+    print(
+        f"""Best time across {repeat} repeats of {number}
+        run(s) per repeat: {average} sec"""
+        )
+    return result
 
 
 def main():
@@ -62,3 +81,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    timeit_helper()
